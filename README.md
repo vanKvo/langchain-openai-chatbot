@@ -13,14 +13,12 @@ Quickstart (local)
    python -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
-
 3. Create a .env file from .env.example and set OPENAI_API_KEY.
-
 4. Add docs to the `docs/` folder (text or markdown). Then run:
    python ingest.py
 
 Option 1:
-Serve UI and backend in the same port (testing)
+Serving UI and the backend service in the same port (testing)
 5. This code below added into app.py will mount the ui to the root of the backend server.
 app.mount("/ui", StaticFiles(directory="ui"), name="ui")
 @app.get("/")
@@ -30,28 +28,13 @@ def root():
    python app.py
     
 Option 2 (recommeded in prod):
-Serve backend and UI in different ports. Need to make sure the backend server (app.py) allows CORS.
-5. In the main app, allows CORS.
-from fastapi.middleware.cors import CORSMiddleware
-# List of the origins (URLs) allowed to make requests to the FastAPI app
-origins = [
-        "http://localhost:8081",  # Your frontend running on localhost
-    ] 
-app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,  # List of allowed origins. Use a regex string with allow_origin_regex for more complex matching.
-        allow_credentials=True,  # Allow creds like cookies, HTTP authentication, and client-side SSL certificates to be sent with cross-origin requests
-        allow_methods=["*"],  # Allow all standard HTTP methods (GET, POST, PUT, DELETE, etc.)
-        allow_headers=["*"],  # Allow all headers
-    )
-
+Serving UI and the backend service in different ports. 
+5. In the main app (app.py), allows CORS from the frontend.
 6. Start the API:
-   python app.py
-   # or: uvicorn app:app --reload
-
+   python app.py or uvicorn app:app --reload
 7. Open the minimal UI:
    Serve the ui folder:
-   python -m http.server --directory ui 8080 # http. server is a built-in module that allows you to create a simple HTTP server to serve files from a directory
+   python -m http.server --directory ui 8080
    Then visit http://localhost:8080
 
 Notes and production tips
