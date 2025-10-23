@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - chatbot_network
+
+  auth_service:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile.auth
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    networks:
+      - chatbot_network
+    depends_on:
+      - mongodb
+
+  app:
+    build:
+      context: ./services/app
+      dockerfile: Dockerfile.app
+    ports:
+      - "8090:8090"
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - AUTH_SERVICE_VERIFY_URL=http://auth_service:8001/verify
+    volumes:
+      - ./chroma_db:/app/chroma_db
+    networks:
+      - chatbot_network
+    depends_on:
+      - mongodb
+      - auth_service
+
+networks:
+  chatbot_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

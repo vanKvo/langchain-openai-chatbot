@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Customer Chatbot</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; color: #222; }
+    #chat { border: 1px solid #ddd; padding: 1rem; height: 60vh; overflow-y: auto; background: #fafafa; }
+    .msg { margin-bottom: 0.75rem; }
+    .user { text-align: right; }
+    .user .bubble { display: inline-block; background: #007bff; color: white; padding: .5rem .75rem; border-radius: 12px; }
+    .bot .bubble { display: inline-block; background: #f1f1f1; color: #222; padding: .5rem .75rem; border-radius: 12px; }
+    #inputRow { margin-top: 1rem; display:flex; gap: .5rem; }
+    input[type="text"] { flex:1; padding: .5rem; border: 1px solid #ccc; border-radius: 6px; }
+    button { padding: .5rem .75rem; border-radius: 6px; border: none; background: #28a745; color: white; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    footer { margin-top: 1rem; font-size: .9rem; color: #666;}
+  </style>
+</head>
+<body>
+  <h1>Customer Chatbot (Demo)</h1>
+  <div id="chat" aria-live="polite"></div>
+
+  <div id="inputRow">
+    <input id="question" type="text" placeholder="Ask questions here..." />
+    <button id="send">Send</button>
+  </div>
+
+  <footer>
+    This demo calls the local API at <code>/chat</code>. Make sure your FastAPI server is running.
+  </footer>
+
+    <script>
+    const chatEl = document.getElementById('chat');
+    const questionEl = document.getElementById('question');
+    const sendBtn = document.getElementById('send');
+
+    // Keep session_id and auth token in localStorage
+    let sessionId = localStorage.getItem('chat_session_id') || null;
+    let authToken = localStorage.getItem('auth_token') || null;
+
+    // Function to get authentication token
+    async function login() {
+        try {
+            const formData = new URLSearchParams();
+            formData.append('username', 'demo');
+            formData.append('password', 'demo-password');
+            
+            const response = await fetch('http://127.0.0.1:8001/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Authentication failed');
+            }
+            
+            const data = await response.json();
+            authToken = data.access_token;
+            console.log('Obtained auth token:', authToken);
+            localStorage.setItem('auth_token', authToken);
+        } catch (error) {
+            console.error('Login error:', error);
+            appendMessage('bot', 'Error: Could not authenticate. Please try again later.');
+        }
+    }
+
+    // Login when page loads
+    login();    
+    
+    function appendMessage(role, text) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = text;
+      wrapper.appendChild(bubble);
+      chatEl.appendChild(wrapper);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    async function sendQuestion() {
+      const q = questionEl.value.trim();
+      if (!q) return;
+      appendMessage('user', q);
+      questionEl.value = '';
+      sendBtn.disabled = true;
+
+      try {
+        if (!authToken) {
+            await login();
+            if (!authToken) {
+                appendMessage('bot', 'Error: Not authenticated. Please refresh the page.');
+                return;
+            }
+        }
+        console.log('Using auth token:', authToken);
+        const resp = await fetch('http://127.0.0.1:8090/chat', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ session_id: sessionId, question: q })
+        });
+        if (!resp.ok) {
+          const err = await resp.json();
+          appendMessage('bot', 'Error: ' + (err.detail || resp.statusText));
+        } else {
+          const data = await resp.json();
+          if (data.session_id) {
+            sessionId = data.session_id;
+            localStorage.setItem('chat_session_id', sessionId);
+          }
+          appendMessage('bot', data.answer || '(no answer)');
+        }
+      } catch (e) {
+        appendMessage('bot', 'Network error: ' + e.message);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    sendBtn.addEventListener('click', sendQuestion);
+    questionEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendQuestion(); });
+
+    // greet
+    appendMessage('bot', 'Hello! Ask me anything about our products and support. (This is a demo UI — run the backend and ingest docs first.)');
+  </script>
+</body>
+</html>
