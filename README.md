@@ -3,36 +3,29 @@
 This repository contains a minimal example integrating OpenAI + LangChain to build a context-aware chatbot for customer inquiries. It includes:
 - ingest.py: ingest docs into Chroma vector store
 - app.py: FastAPI chat server exposing /chat
+- auth_service.py: auth services
+- db.py: MongoDB database storing chat conversations
 - a minimal static UI in ui/index.html
 - prompt_template.md: example system prompt
 - requirements.txt and .env.example
+- docker-compose.yml: orchestra all microservices.
 
 Quickstart (local)
 1. Clone or create the repo locally and add these files.
+
 2. Create a Python virtual env and install dependencies:
    python -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
+
 3. Create a .env file from .env.example and set OPENAI_API_KEY.
+
 4. Add docs to the `docs/` folder (text or markdown). Then run:
    python ingest.py
 
-Option 1:
-Serving UI and the backend service in the same port (testing)
-5. This code below added into app.py will mount the ui to the root of the backend server.
-app.mount("/ui", StaticFiles(directory="ui"), name="ui")
-@app.get("/")
-def root():
-    return FileResponse("ui/index.html")
-6. Start the API:
-   python app.py
-    
-Option 2 (recommeded in prod):
-Serving UI and the backend service in different ports. 
-5. In the main app (app.py), allows CORS from the frontend.
-6. Start the API:
-   python app.py or uvicorn app:app --reload
-7. Open the minimal UI:
+5. Run docker-compose.yml to start the database and backend services.
+
+6. Open the minimal UI:
    Serve the ui folder:
    python -m http.server --directory ui 8080
    Then visit http://localhost:8080
